@@ -43,6 +43,38 @@ jobs:
       - attach_workspace:
           at: ~/
       - samvera/rubocop
+  build:
+    parameters:
+      ruby_version:
+        type: string
+        default: 2.5.5
+      bundler_version:
+        type: string
+        default: 1.17.3
+      rails_version:
+        type: string
+        default: '5.2.2'
+    executor:
+      name: 'samvera/ruby'
+      ruby_version: << parameters.ruby_version >>
+    environment:
+      RAILS_VERSION: << parameters.rails_version >>
+      NOKOGIRI_USE_SYSTEM_LIBRARIES: true
+      ENGINE_CART_RAILS_OPTIONS: --skip-git --skip-bundle --skip-listen --skip-spring --skip-yarn --skip-keeps --skip-action-cable --skip-coffee --skip-puma --skip-test
+    steps:
+      - attach_workspace:
+          at: ~/
+      - samvera/engine_cart_generate:
+          cache_key: v1-internal-test-app-{{ checksum "noid-rails.gemspec" }}-{{ checksum "spec/test_app_templates/lib/generators/test_app_generator.rb" }}-{{ checksum "lib/generators/noid/rails/install_generator.rb" }}-<< parameters.rails_version >>-<< parameters.ruby_version >>
+      - samvera/bundle_for_gem:
+          ruby_version: << parameters.ruby_version >>
+          bundler_version: << parameters.bundler_version >>
+          project: noid-rails
+      - persist_to_workspace:
+          root: ~/
+          paths:
+          - project/*
+          - project/**/*
 
 workflows:
   version: 2
@@ -53,6 +85,11 @@ workflows:
           rails_version: "5.1.7"
       - lint:
           ruby_version: "2.5.5"
+          requires:
+            - bundle
+      - build:
+          ruby_version: "2.5.5"
+          rails_version: "5.1.7"
           requires:
             - bundle
 
